@@ -1,5 +1,5 @@
-export const CALIBRE_ICON_ID = "calibre";
-export const CALIBRE_ICON_SVG = `
+export const ADVANCED_CALIBRE_ICON_ID = "advanced-calibre";
+export const ADVANCED_CALIBRE_ICON_SVG = `
 <g transform="translate(-24.920761,-148.42979)">
 	<image width="100" height="100" preserveAspectRatio="none" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADkAAAA5CAYAAACMGIOFAAAACXBIWXMAABYlAAAWJQFJUiTwAAAU
 	BklEQVRoge2aaWxk2XXff+fe92onWWSRLC7NbrK7p6d7emZ6RiNZYy2j2AqCSeLYQGAktqMEgQ0k

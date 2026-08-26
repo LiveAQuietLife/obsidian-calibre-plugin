@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-calibre-plugin",
-	"name": "Calibre",
-	"version": "1.0.8",
-	"minAppVersion": "0.12.0",
-	"description": "This plugin allows you to access your calibre libraries and read books directly in Obsidian.",
-	"author": "caronchen",
-	"authorUrl": "https://github.com/caronchen/obsidian-calibre-plugin",
+	"id": "advanced-calibre",
+	"name": "Advanced Calibre",
+	"version": "2.0.1",
+	"minAppVersion": "1.4.11",
+	"description": "Browse your calibre library, read books, and import book metadata directly into Obsidian.",
+	"author": "LiveAQuietLife",
+	"authorUrl": "https://github.com/LiveAQuietLife/obsidian-calibre-plugin",
 	"isDesktopOnly": true
 }
