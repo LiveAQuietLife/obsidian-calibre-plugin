@@ -3,8 +3,30 @@
 All notable changes to Advanced Calibre.
 
 Repository: https://github.com/LiveAQuietLife/obsidian-calibre-plugin
-Originally forked from https://github.com/caronchen/obsidian-calibre-plugin, which was abandoned
-after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0.
+
+Originally forked from https://github.com/caronchen/obsidian-calibre-plugin, which was abandoned after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0.
+
+---
+
+## [2.1.0] — 2026-08-27
+
+### Added
+- **Custom Template File mode.** New "Note Generation" setting: Built-in (unchanged default)
+  or Custom Template File, which reads any vault `.md` file raw and substitutes tokens through
+  the whole thing, including frontmatter — for anyone who already has their own note template
+  with fields calibre doesn't provide.
+- Full token set for Custom mode: plain values (`title`, `author`, `authors`, `year`,
+  `publisher`, `series`, `seriesIndex`, `byline`, `cover`, `coverWidth`, `description`, `pages`,
+  `isbn`, `added`, `calibreUuid`, `calibreId`), `_yaml`-suffixed variants pre-quoted for safe use
+  in frontmatter (`title`, `author`, `authors`, `publisher`, `series`), and whole-line block
+  tokens (`tags_yaml`, `languages_yaml`, `identifiers_yaml`) that disappear entirely — including
+  their own line — when a book has no data for them.
+- New `TemplateFileSuggest`, autocompleting vault `.md` files for the Custom Template File setting.
+
+### Notes
+- No `minAppVersion` change — everything used (`vault.read`, `AbstractInputSuggest`) is already
+  covered by the existing 1.4.11 floor.
+- **Known gap:** no token yet for the full publication date, only `{{year}}`.
 
 ---
 
@@ -29,7 +51,7 @@ after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0.
   settings-tab heading, new ribbon tooltip, renamed classes and files throughout the source tree.
   This is a clean identity going forward — see the note above for lineage, which is otherwise
   not referenced anywhere in the plugin itself.
-- Command ids simplified (e.g. `calibre-open-horizontally` → `open-horizontally`); Obsidian
+- Command ids simplified (e.g. `calibre-open-horizontally` —> `open-horizontally`); Obsidian
   already namespaces commands under the plugin id, so the old prefix was redundant.
 - Default view display text changed from "CALIBRE" to "Advanced Calibre" (user-configurable
   either way).
@@ -57,7 +79,7 @@ after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0.
 ### Changed
 - **`minAppVersion` raised from 1.0.0 to 1.4.11**, the first version providing
   `AbstractInputSuggest`. Determined by bisecting published typings, not from memory.
-- TypeScript 4.4.4 → 5.4.5 and obsidian typings 0.14.8 → 1.4.11.
+- TypeScript 4.4.4 —> 5.4.5 and obsidian typings 0.14.8 —> 1.4.11.
 
 ### Fixed
 - **Typechecking was silently disabled.** `@types/node` syntax errors aborted `tsc` before it
@@ -87,7 +109,7 @@ after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0.
   chosen a split direction; existing saved preferences are preserved.
 
 ### Changed
-- Settings label "Split Direction" → "Open In", with options relabeled to "Full tab",
+- Settings label "Split Direction" —> "Open In", with options relabeled to "Full tab",
   "Horizontal split", "Vertical split".
 - `onClose()` now sets a `closed` flag so an in-flight reachability probe can't paint a message
   onto an already-closed pane.
@@ -113,9 +135,9 @@ after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0.
 - **Version stamping** in the esbuild banner, read from `package.json`.
 
 ### Changed
-- `splitActiveLeaf` → `getLeaf('split', direction)`. Future-proofing against a deprecated API;
+- `splitActiveLeaf` —> `getLeaf('split', direction)`. Future-proofing against a deprecated API;
   the old call was **not** actually broken on Obsidian 1.13.7.
-- `minAppVersion` 0.12.0 → 1.0.0.
+- `minAppVersion` 0.12.0 —> 1.0.0.
 
 ---
 
