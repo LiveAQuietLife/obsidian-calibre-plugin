@@ -151,3 +151,4 @@ Originally created by [caronchen](https://github.com/caronchen/obsidian-calibre-
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
