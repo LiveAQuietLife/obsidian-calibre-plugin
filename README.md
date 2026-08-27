@@ -1,60 +1,153 @@
-![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/caronchen/obsidian-calibre-plugin) ![GitHub all releases](https://img.shields.io/github/downloads/caronchen/obsidian-calibre-plugin/total) ![GitHub Release Date](https://img.shields.io/github/release-date/caronchen/obsidian-calibre-plugin) ![GitHub last commit](https://img.shields.io/github/last-commit/caronchen/obsidian-calibre-plugin)
+# Advanced Calibre
 
-# Obsidian Calibre Plugin
+An Obsidian plugin that embeds your calibre library as a live pane inside Obsidian, and imports book metadata into notes you can link, tag, and search alongside the rest of your vault.
 
-This is a calibre Content server plugin for [Obsidian](https://obsidian.md). Allow you to access your calibre libraries and read books directly in Obsidian. Rearrange a comfortable layout of the workspace, you can take notes while reading, and read more books at the same time by opening more panes.
+Originally forked from [caronchen/obsidian-calibre-plugin](https://github.com/caronchen/obsidian-calibre-plugin), which was abandoned after its 1.0.8 release. Renamed to Advanced Calibre starting at 2.0.0. This is a personal fork — it isn't submitted to Obsidian's Community Plugins list, and isn't affiliated with or endorsed by the original author.
 
-- [Obsidian Calibre Plugin](#obsidian-calibre-plugin)
-	- [How it Works](#how-it-works)
-	- [How to use](#how-to-use)
-		- [Start quickly](#start-quickly)
-			- [STEP 1: Start Content Server](#step-1-start-content-server)
-			- [STEP 2: Install Calibre Plugin](#step-2-install-calibre-plugin)
-			- [STEP 3: Open Calibre Container](#step-3-open-calibre-container)
-		- [How to Change Content Server Port](#how-to-change-content-server-port)
-			- [Change in Calibre Application](#change-in-calibre-application)
-			- [Change in Calibre Plugin](#change-in-calibre-plugin)
-	- [Manually installing the plugin](#manually-installing-the-plugin)
-	- [The calibre Content server](#the-calibre-content-server)
+## What it does
 
-## How it Works
-Calibre plugin will open a Obsidian view in your workspace when you click Calibre ribbon icon. The view contains an iframe to connect to the content server. You can change the server address in plugin settings.
+- **Live calibre view.** Opens calibre's Content Server in a pane inside Obsidian — full tab, or split alongside your notes — so you can browse and read without leaving the app.
+- **Metadata import.** Picks a book from your library (fuzzy search by title/author) and writes a note for it: frontmatter, cover image, and tags.
+- **Two ways to shape the note.** A built-in four-section template, or point it at your own Markdown file and it fills in the tokens — including in frontmatter.
 
-## How to use
+## Installing
 
-### Start quickly
-#### STEP 1: Start Content Server
-To start the server, click the Connect/share button and choose Start Content server.
+Obsidian only shows Community Plugins list submissions in its in-app browser, so this has to be installed manually:
 
-![image](https://user-images.githubusercontent.com/150803/143490663-afc3b418-a36e-422a-bab7-97b09237b507.png)
+1. Download `main.js`, `manifest.json`, and `styles.css` from this repo (either a tagged [Release](../../releases), or by building from source — see below).
+2. Copy all three into `VaultFolder/.obsidian/plugins/advanced-calibre/` in your vault (create the folder if it doesn't exist).
+3. Reload Obsidian, then enable **Advanced Calibre** under Settings —> Community plugins —> Installed plugins.
 
+This plugin is desktop-only — calibre's Content Server iframe and `AbstractInputSuggest` folder/file pickers aren't available on mobile.
 
-#### STEP 2: Install Calibre Plugin
-Just do it.
+## Settings
 
-#### STEP 3: Open Calibre Container
-Click the ribbon icon to open Calibre Container.
+| Section | What it controls |
+|---|---|
+| **Server Address** | Your calibre Content Server URL, e.g. `http://localhost:8080` |
+| **Local IP override** | Fixes auto-detection picking the wrong network adapter — common with VPNs, Docker, or WSL |
+| **Open In** | Full tab, horizontal split, or vertical split |
+| **Library** | Which calibre library to import from (as it appears in calibre's library chooser) |
+| **Import Folder / Filename Template** | Where imported notes go, and how they're named |
+| **Open Note After Import** | Jumps to the new note automatically after import |
+| **Tag Space Handling / Max Tags** | See [Tag handling](#tag-handling) below |
+| **Note Generation** | Built-in or Custom Template File — see below |
+| **Download Cover Image / Cover Folder / Cover Width** | Whether covers are saved into the vault, and how they're displayed |
 
-![image](https://user-images.githubusercontent.com/150803/143490701-b7eedf79-b555-49e7-ad67-1a55da714c46.png)
+## Tag handling
 
-![image](https://user-images.githubusercontent.com/150803/143516737-05d428df-88fc-40a9-a26b-cd163683d607.png)
+calibre tags are free text, and commonly contain spaces or punctuation that Obsidian tags can't — a tag like `old testament` would otherwise render struck through as invalid. **Tag Space Handling** controls how spaces are resolved:
 
+- **Hyphenate** — `old testament` —> `old-testament`
+- **CamelCase** — `old testament` —> `OldTestament`
+- **Leave as-is** — no conversion (may not render as a valid tag)
 
-### How to Change Content Server Port
+Beyond spaces, anything outside letters, numbers, underscores, hyphens, and slashes is stripped — calibre permits apostrophes and other punctuation that would still break a tag even after space handling. **Max Tags** caps how many tags each imported book carries over, keeping the earliest ones calibre returns (set to 0 for no limit).
 
-#### Change in Calibre Application
-![image](https://user-images.githubusercontent.com/150803/143490820-094fd57d-8150-4b82-a678-a81e3f15614e.png)
+## Note Generation: Built-in vs. Custom Template File
 
-![image](https://user-images.githubusercontent.com/150803/143490891-58dcb930-c0c6-40ee-9256-ab25164a77ec.png)
+### Built-in
 
+The default. Frontmatter is fixed (protecting YAML validity), but four body sections are editable in settings:
 
-#### Change in Calibre Plugin
-![image](https://user-images.githubusercontent.com/150803/143490977-89e98839-0861-44c5-a002-b855a26f00ae.png)
+- **Heading Template** — default `# {{title}}`
+- **Byline Template** — default `{{byline}}`, only rendered when a byline can be built
+- **Cover Template** — default `![[{{cover}}|{{coverWidth}}]]`, only rendered when a cover was downloaded
+- **Description Template** — default `## Description\n\n{{description}}`, only rendered when the book has one
 
-## Manually installing the plugin
+### Custom Template File
 
-- Copy over `main.js`, `styles.css`, `manifest.json` from [Releases](https://github.com/caronchen/obsidian-calibre-plugin/releases) to your vault `VaultFolder/.obsidian/plugins/obsidian-calibre-plugin/`.
+Point this at any `.md` file in your vault, and the importer reads it raw and substitutes tokens through the **entire file, including frontmatter** — useful if you already have your own note template with fields calibre doesn't know about (reading status, personal rating, project links, etc.).
 
-## The calibre Content server
+**Plain tokens** — use anywhere in the file:
 
-See https://manual.calibre-ebook.com/server.html
+| Token | Value |
+|---|---|
+| `{{title}}` | Book title |
+| `{{author}}` | Sort-name format ("Last, First") |
+| `{{authors}}` | Display-order list ("First Last, First Last") |
+| `{{year}}` | Publication year only |
+| `{{publisher}}` | Publisher name |
+| `{{series}}` | Series name |
+| `{{seriesIndex}}` | Position in series |
+| `{{byline}}` | Pre-built "Authors · Publisher · Year," missing pieces dropped |
+| `{{cover}}` | Vault path to the downloaded cover (empty if none) |
+| `{{coverWidth}}` | Your configured Cover Width setting |
+| `{{description}}` | calibre's comments, converted from HTML to Markdown |
+| `{{pages}}` | Page count, if calibre has that custom column |
+| `{{isbn}}` | ISBN, pulled from identifiers |
+| `{{added}}` | Date added to your calibre library (YYYY-MM-DD) |
+| `{{calibreUuid}}` | calibre's internal UUID |
+| `{{calibreId}}` | calibre's numeric book ID |
+
+**`_yaml` variants** — use these instead of the plain token when the value sits in a frontmatter value position (e.g. `title: {{title_yaml}}`). They're pre-quoted whenever the raw value would otherwise break YAML — a colon in a title, for instance:
+
+`{{title_yaml}}` · `{{author_yaml}}` · `{{authors_yaml}}` · `{{publisher_yaml}}` · `{{series_yaml}}`
+
+**Whole-line block tokens** — must sit alone on their own line. They expand to real content, or disappear completely (the token *and* its line) when there's nothing to show, so you never end up with an empty `tags:` line for a book with no tags:
+
+- `{{tags_yaml}}` —> `tags: [a, b, c]`
+- `{{languages_yaml}}` —> `languages: [eng]`
+- `{{identifiers_yaml}}` —> one line per identifier calibre has (isbn, asin, goodreads, etc.)
+
+**Example template:**
+
+```markdown
+---
+title: {{title_yaml}}
+author: {{author_yaml}}
+type: book
+status: 
+{{tags_yaml}}
+{{languages_yaml}}
+{{identifiers_yaml}}
+---
+
+# {{title}}
+
+{{byline}}
+
+![[{{cover}}|{{coverWidth}}]]
+
+## Description
+
+{{description}}
+```
+
+Static lines you write yourself — `type: book`, `status:` — pass through untouched. Only recognized `{{tokens}}` get replaced.
+
+**Known gap:** there's currently no token for the full publication date, only `{{year}}`. If you need the full date, that's a small planned addition, not yet available.
+
+## Known limitations
+
+### Authentication is not supported
+
+If your calibre Content Server requires a username and password, this plugin can't supply it. Neither the live view nor metadata import will work against a password-protected server. Metadata import fails with a clear error rather than a silent one; the live view will show calibre's own login page inside the pane, with no way to submit credentials through it that persist.
+
+This is a deliberate scope decision, not an oversight, and it's been researched rather than assumed. The plugin's live view is just an `<iframe>` pointing at calibre's Content Server, everything inside it is calibre's own page, not this plugin's. An iframe's `src` can't carry a custom `Authorization` header, and embedding `username:password@host` directly in the URL, the obvious workaround, is unreliable in Electron/Chromium, which restrict userinfo-in-URL for security reasons (it's a classic phishing vector).
+
+This isn't a hypothetical: a related fork ([shibco/obsidian-calibre-plugin](https://github.com/shibco/obsidian-calibre-plugin)) tried exactly this approach — username/password settings fields, credentials embedded into the iframe URL and shipped it. It saw zero adoption and stores the password in plaintext in the vault's settings file. The two projects that *did* solve calibre auth in Obsidian ([qvanphong/calibre-opds-obsidian](https://github.com/qvanphong/calibre-opds-obsidian) and [p24l/calibre-bridge](https://github.com/p24l/calibre-bridge)) both did it by abandoning the iframe entirely — building a real OPDS/API client that attaches proper auth headers outside the browser sandbox, and rendering results as native Obsidian elements instead of an embedded page.
+
+That's a legitimate way to fix this, but it's a rewrite of the plugin's reading pane, not a small patch. It hasn't been undertaken here. **If your Content Server has no login enabled, none of this affects you.**
+
+### Most display issues aren't this plugin's problem
+
+Since the live view is just an iframe onto calibre's own Content Server page, almost everything you see inside it — the reader, the library grid, any rendering quirks — belongs to calibre, not this plugin. The practical test: if something reproduces in a plain desktop browser pointed at the same server address, it's calibre's issue to fix, not this plugin's.
+
+## Development
+
+```bash
+npm install
+npm run dev     # esbuild in watch mode
+npm run build   # production build
+```
+
+Manual test loop: build, copy `main.js`, `manifest.json`, and `styles.css` into your vault's plugin folder, then reload Obsidian (or disable/re-enable the plugin) to pick up changes.
+
+## Credits
+
+Originally created by [caronchen](https://github.com/caronchen/obsidian-calibre-plugin). Renamed and continued independently as Advanced Calibre starting at 2.0.0.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
