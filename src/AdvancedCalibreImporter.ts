@@ -166,6 +166,100 @@ function yamlKey(key: string, value?: string): string {
   return value ? `${key}: ${yamlScalar(value)}\n` : '';
 }
 
+/**
+ * Matches a `{{tags_yaml}}`, `{{languages_yaml}}`, or `{{identifiers_yaml}}`
+ * token sitting alone on its own line (whitespace either side is fine). These
+ * are whole-line block tokens: they expand to zero, one, or several lines
+ * depending on the book's data, and disappear entirely — including the line
+ * itself and its line break — when there's nothing to show, rather than
+ * leaving a blank line behind.
+ */
+const BLOCK_TOKEN_PATTERN = /^[ \t]*\{\{\s*(tags_yaml|languages_yaml|identifiers_yaml)\s*\}\}[ \t]*\r?\n?/gm;
+
+/**
+ * Computes the expansion for each whole-line block token. Each value already
+ * ends with its own trailing newline per line (or is an empty string), so it
+ * can replace the token's line directly without extra joining logic.
+ */
+function buildBlockValues(book: CalibreBook, settings: AdvancedCalibrePluginSettings): Record<string, string> {
+  let identifiers = '';
+  for (const [scheme, value] of Object.entries(book.identifiers ?? {})) {
+    if (value) {
+      identifiers += `${scheme}: ${JSON.stringify(String(value))}\n`;
+    }
+  }
+
+  return {
+    tags_yaml: yamlList('tags', processTags(book.tags, settings)),
+    languages_yaml: yamlList('languages', book.languages),
+    identifiers_yaml: identifiers,
+  };
+}
+
+/**
+ * Builds the full token set available to a Custom Template File: plain values
+ * for use anywhere in the body, plus `_yaml`-suffixed variants that are
+ * pre-quoted where needed so they're safe to drop directly into a frontmatter
+ * value position (e.g. `title: {{title_yaml}}`).
+ */
+function buildCustomValues(
+  book: CalibreBook,
+  coverPath: string | null,
+  settings: AdvancedCalibrePluginSettings
+): Record<string, string> {
+  const title = book.title ?? 'Untitled';
+  const displayAuthors = book.authors?.join(', ') ?? book.author_sort ?? '';
+  const year = yearOf(book.pubdate);
+  const byline = [displayAuthors, book.publisher, year].filter(Boolean).join(' · ');
+  const description = book.comments ? htmlToMarkdown(book.comments).trim() : '';
+  const pages = book['pages'];
+  const isbn = book.identifiers?.['isbn'] ?? book.identifiers?.['ISBN'] ?? '';
+
+  return {
+    title,
+    author: book.author_sort ?? displayAuthors,
+    authors: displayAuthors,
+    year,
+    publisher: book.publisher ?? '',
+    series: book.series ?? '',
+    seriesIndex: typeof book.series_index === 'number' ? String(book.series_index) : '',
+    byline,
+    cover: coverPath ?? '',
+    coverWidth: String(settings.coverWidth ?? 350),
+    description,
+    pages: typeof pages === 'number' ? String(pages) : '',
+    isbn,
+    added: dateOf(book.timestamp),
+    calibreUuid: book.uuid ?? '',
+    calibreId: String(book.application_id),
+    // _yaml variants: pre-quoted where the value could otherwise break YAML
+    // parsing (colons, quotes, leading zeros). Missing optional fields render
+    // as an empty string rather than `""`, so an unused frontmatter line like
+    // `series: {{series_yaml}}` comes out as a harmless empty (null) value
+    // instead of a visible pair of quotes.
+    title_yaml: yamlScalar(title),
+    author_yaml: yamlScalar(book.author_sort ?? displayAuthors),
+    authors_yaml: yamlScalar(displayAuthors),
+    publisher_yaml: book.publisher ? yamlScalar(book.publisher) : '',
+    series_yaml: book.series ? yamlScalar(book.series) : '',
+  };
+}
+
+/**
+ * Renders a Custom Template File's raw content: whole-line block tokens are
+ * expanded first (since they operate on entire lines), then every remaining
+ * `{{token}}` — plain or `_yaml` — is substituted the same way the built-in
+ * templates work.
+ */
+export function renderCustomTemplate(
+  template: string,
+  values: Record<string, string>,
+  blockValues: Record<string, string>
+): string {
+  const withBlocksExpanded = template.replace(BLOCK_TOKEN_PATTERN, (_match, key: string) => blockValues[key] ?? '');
+  return renderTemplate(withBlocksExpanded, values);
+}
+
 export class AdvancedCalibreImporter {
   constructor(private app: App, private settings: AdvancedCalibrePluginSettings) {}
 
@@ -284,6 +378,30 @@ export class AdvancedCalibreImporter {
   }
 
   /**
+   * Builds a note from the user's own Custom Template File instead of the
+   * built-in layout. Throws rather than falling back or writing a partial
+   * note if no template is configured or it can't be found — a clear failure
+   * beats a silently wrong note.
+   */
+  private async buildCustomNote(book: CalibreBook, coverPath: string | null): Promise<string> {
+    const templatePath = (this.settings.customTemplateFile ?? '').trim();
+    if (!templatePath) {
+      throw new Error('No Custom Template File is set in Advanced Calibre settings.');
+    }
+
+    const file = this.app.vault.getAbstractFileByPath(normalizePath(templatePath));
+    if (!(file instanceof TFile)) {
+      throw new Error(`Custom Template File not found: ${templatePath}`);
+    }
+
+    const template = await this.app.vault.read(file);
+    const values = buildCustomValues(book, coverPath, this.settings);
+    const blockValues = buildBlockValues(book, this.settings);
+
+    return renderCustomTemplate(template, values, blockValues);
+  }
+
+  /**
    * Downloads the cover into the vault alongside the note. Returns the vault path
    * on success, or null if there is no cover or the download fails — a missing
    * cover should not abort the import.
@@ -356,7 +474,11 @@ export class AdvancedCalibreImporter {
         new Notice(`Imported without a cover \u2014 ${e.message}`, 8000);
       }
     }
-    const file = await this.app.vault.create(path, this.buildNote(book, coverPath));
+    const content = this.settings.noteGeneration === 'custom'
+      ? await this.buildCustomNote(book, coverPath)
+      : this.buildNote(book, coverPath);
+
+    const file = await this.app.vault.create(path, content);
     new Notice(`Imported ${basename}`);
     return file;
   }

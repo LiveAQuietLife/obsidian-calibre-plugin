@@ -1,10 +1,18 @@
 import { App, debounce, PluginSettingTab, Setting, SplitDirection } from 'obsidian';
 import AdvancedCalibrePlugin from './main';
 import { FolderSuggest } from './FolderSuggest';
+import { TemplateFileSuggest } from './TemplateFileSuggest';
 import { ADVANCED_CALIBRE_ICON_ID } from './tools';
 
 /** How calibre tags with spaces are converted into valid Obsidian tags. */
 export type TagSpaceHandling = 'hyphenate' | 'camelCase' | 'none';
+
+/**
+ * Built-in uses the four Note Layout templates below. Custom reads a vault
+ * .md file raw and substitutes tokens through the entire file, frontmatter
+ * included — the four Note Layout templates are inactive in this mode.
+ */
+export type NoteGeneration = 'built-in' | 'custom';
 
 export interface AdvancedCalibrePluginSettings {
 	address?: string;
@@ -21,6 +29,8 @@ export interface AdvancedCalibrePluginSettings {
 	coverWidth?: number;
 	importLibrary?: string;
 	autoOpenAfterImport: boolean;
+	noteGeneration: NoteGeneration;
+	customTemplateFile?: string;
 	headingTemplate: string;
 	bylineTemplate: string;
 	coverTemplate: string;
@@ -45,6 +55,8 @@ export const DEFAULT_SETTINGS: AdvancedCalibrePluginSettings = {
 	coverWidth: 350,
 	importLibrary: "Calibre_Library",
 	autoOpenAfterImport: true,
+	noteGeneration: "built-in",
+	customTemplateFile: "",
 	headingTemplate: "# {{title}}",
 	bylineTemplate: "{{byline}}",
 	coverTemplate: "![[{{cover}}|{{coverWidth}}]]",
@@ -89,11 +101,11 @@ export class AdvancedCalibreSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Local IP override")
-			.setDesc("Only used if the setting above is on. Leave blank to auto-detect. If auto-detect picks the wrong network adapter (common with VPNs, Docker, or virtual machines installed), enter your computer's real local IP address here instead, e.g. 192.168.1.166.")
+			.setDesc("Only used if the setting above is on. Leave blank to auto-detect. If auto-detect picks the wrong network adapter (common with VPNs, Docker, or virtual machines installed), enter your computer's real local IP address here instead, e.g. 192.168.1.100.")
 			.addText(text => {
 				text.inputEl.size = 25;
 				text
-					.setPlaceholder("Auto-detect (e.g. 192.168.1.166)")
+					.setPlaceholder("Auto-detect (e.g. 192.168.1.100)")
 					.setValue(this.plugin.settings.localIpOverride)
 					.onChange(debounce(async (value) => {
 						this.plugin.settings.localIpOverride = value;
@@ -214,67 +226,101 @@ export class AdvancedCalibreSettingTab extends PluginSettingTab {
 					}, DEBOUNCE_TIMEOUT));
 			});
 
-		containerEl.createEl('h3', { text: 'Note Layout' });
+		containerEl.createEl('h3', { text: 'Note Generation' });
 
 		new Setting(containerEl)
-			.setName("Heading Template")
-			.setDesc("Available: {{title}}, {{author}}, {{authors}}, {{year}}, {{publisher}}, {{series}}, {{id}}.")
-			.addTextArea(text => {
-				text.inputEl.rows = 1;
-				text.inputEl.cols = 40;
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.headingTemplate)
-					.setValue(this.plugin.settings.headingTemplate)
-					.onChange(debounce(async (value) => {
-						this.plugin.settings.headingTemplate = value;
-						this.plugin.saveData(this.plugin.settings);
-					}, DEBOUNCE_TIMEOUT));
-			});
+			.setName("Note Generation")
+			.setDesc("Built-in uses the four templates below to fill in a fixed note structure. Custom Template File reads any Markdown file in your vault and substitutes tokens through the whole thing, frontmatter included — useful if you already have your own template with fields calibre doesn't provide.")
+			.addDropdown(dropdown => dropdown
+				.addOption("built-in", "Built-in")
+				.addOption("custom", "Custom Template File")
+				.setValue(this.plugin.settings.noteGeneration)
+				.onChange(async (value: NoteGeneration) => {
+					this.plugin.settings.noteGeneration = value;
+					this.plugin.saveData(this.plugin.settings);
+					// The two modes show entirely different settings below, so
+					// redraw the pane rather than trying to toggle visibility.
+					this.display();
+				}));
 
-		new Setting(containerEl)
-			.setName("Byline Template")
-			.setDesc("Available: all heading variables, plus {{byline}} (authors, publisher and year, joined by '·' with any missing pieces dropped). Only used when a byline can be built.")
-			.addTextArea(text => {
-				text.inputEl.rows = 1;
-				text.inputEl.cols = 40;
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.bylineTemplate)
-					.setValue(this.plugin.settings.bylineTemplate)
-					.onChange(debounce(async (value) => {
-						this.plugin.settings.bylineTemplate = value;
-						this.plugin.saveData(this.plugin.settings);
-					}, DEBOUNCE_TIMEOUT));
-			});
+		if (this.plugin.settings.noteGeneration === 'custom') {
+			new Setting(containerEl)
+				.setName("Custom Template File")
+				.setDesc("A Markdown file in your vault to use as the note template. See the README for the full list of available tokens, including the _yaml-suffixed and whole-line block variants meant for frontmatter.")
+				.addText(text => {
+					text.inputEl.size = 25;
+					new TemplateFileSuggest(this.app, text.inputEl);
+					text
+						.setPlaceholder("Templates/Book Note.md")
+						.setValue(this.plugin.settings.customTemplateFile)
+						.onChange(debounce(async (value) => {
+							this.plugin.settings.customTemplateFile = value;
+							this.plugin.saveData(this.plugin.settings);
+						}, DEBOUNCE_TIMEOUT));
+				});
+		} else {
+			containerEl.createEl('h3', { text: 'Note Layout' });
 
-		new Setting(containerEl)
-			.setName("Cover Template")
-			.setDesc("Available: all heading variables, plus {{cover}} (the cover's vault path) and {{coverWidth}}. Only used when a cover was downloaded.")
-			.addTextArea(text => {
-				text.inputEl.rows = 1;
-				text.inputEl.cols = 40;
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.coverTemplate)
-					.setValue(this.plugin.settings.coverTemplate)
-					.onChange(debounce(async (value) => {
-						this.plugin.settings.coverTemplate = value;
-						this.plugin.saveData(this.plugin.settings);
-					}, DEBOUNCE_TIMEOUT));
-			});
+			new Setting(containerEl)
+				.setName("Heading Template")
+				.setDesc("Available: {{title}}, {{author}}, {{authors}}, {{year}}, {{publisher}}, {{series}}, {{id}}.")
+				.addTextArea(text => {
+					text.inputEl.rows = 1;
+					text.inputEl.cols = 40;
+					text
+						.setPlaceholder(DEFAULT_SETTINGS.headingTemplate)
+						.setValue(this.plugin.settings.headingTemplate)
+						.onChange(debounce(async (value) => {
+							this.plugin.settings.headingTemplate = value;
+							this.plugin.saveData(this.plugin.settings);
+						}, DEBOUNCE_TIMEOUT));
+				});
 
-		new Setting(containerEl)
-			.setName("Description Template")
-			.setDesc("Available: all heading variables, plus {{description}} (calibre's comments, converted from HTML to Markdown). Only used when the book has a description.")
-			.addTextArea(text => {
-				text.inputEl.rows = 3;
-				text.inputEl.cols = 40;
-				text
-					.setPlaceholder(DEFAULT_SETTINGS.descriptionTemplate)
-					.setValue(this.plugin.settings.descriptionTemplate)
-					.onChange(debounce(async (value) => {
-						this.plugin.settings.descriptionTemplate = value;
-						this.plugin.saveData(this.plugin.settings);
-					}, DEBOUNCE_TIMEOUT));
-			});
+			new Setting(containerEl)
+				.setName("Byline Template")
+				.setDesc("Available: all heading variables, plus {{byline}} (authors, publisher and year, joined by '·' with any missing pieces dropped). Only used when a byline can be built.")
+				.addTextArea(text => {
+					text.inputEl.rows = 1;
+					text.inputEl.cols = 40;
+					text
+						.setPlaceholder(DEFAULT_SETTINGS.bylineTemplate)
+						.setValue(this.plugin.settings.bylineTemplate)
+						.onChange(debounce(async (value) => {
+							this.plugin.settings.bylineTemplate = value;
+							this.plugin.saveData(this.plugin.settings);
+						}, DEBOUNCE_TIMEOUT));
+				});
+
+			new Setting(containerEl)
+				.setName("Cover Template")
+				.setDesc("Available: all heading variables, plus {{cover}} (the cover's vault path) and {{coverWidth}}. Only used when a cover was downloaded.")
+				.addTextArea(text => {
+					text.inputEl.rows = 1;
+					text.inputEl.cols = 40;
+					text
+						.setPlaceholder(DEFAULT_SETTINGS.coverTemplate)
+						.setValue(this.plugin.settings.coverTemplate)
+						.onChange(debounce(async (value) => {
+							this.plugin.settings.coverTemplate = value;
+							this.plugin.saveData(this.plugin.settings);
+						}, DEBOUNCE_TIMEOUT));
+				});
+
+			new Setting(containerEl)
+				.setName("Description Template")
+				.setDesc("Available: all heading variables, plus {{description}} (calibre's comments, converted from HTML to Markdown). Only used when the book has a description.")
+				.addTextArea(text => {
+					text.inputEl.rows = 3;
+					text.inputEl.cols = 40;
+					text
+						.setPlaceholder(DEFAULT_SETTINGS.descriptionTemplate)
+						.setValue(this.plugin.settings.descriptionTemplate)
+						.onChange(debounce(async (value) => {
+							this.plugin.settings.descriptionTemplate = value;
+							this.plugin.saveData(this.plugin.settings);
+						}, DEBOUNCE_TIMEOUT));
+				});
+		}
 
 		new Setting(containerEl)
 			.setName("Download Cover Image")
