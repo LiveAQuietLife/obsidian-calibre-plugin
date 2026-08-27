@@ -1,23 +1,39 @@
-.calibre-donation {
-	width: fit-content;
-	margin: 25px auto;
-	text-align: center;
-	position: absolute;
-	left: 200px;
-	right: 0;
-	bottom: 0;
-}
-
-.calibre-donation a.paypal {
-	display: inline-block;
-}
-
-div.workspace-leaf-content[data-type=calibre-view] div.view-content {
+div.workspace-leaf-content[data-type=advanced-calibre-view] div.view-content {
 	overflow: hidden;
+	position: relative;
 }
 
-div.workspace-leaf-content[data-type=calibre-view] iframe {
+div.workspace-leaf-content[data-type=advanced-calibre-view] iframe {
 	width: 100%;
 	height: 100%;
 	border: 0;
+}
+
+.advanced-calibre-message {
+	padding: 2em;
+	max-width: 30em;
+	margin: 0 auto;
+	text-align: center;
+	color: var(--text-muted);
+	line-height: 1.5;
+}
+
+.advanced-calibre-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	max-width: none;
+	background-color: var(--background-primary);
+	z-index: 1;
+}
+
+.advanced-calibre-overlay p {
+	max-width: 30em;
+	margin: 0.5em 0;
 }

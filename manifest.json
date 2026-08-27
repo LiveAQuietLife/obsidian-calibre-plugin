@@ -1,7 +1,7 @@
 {
 	"id": "advanced-calibre",
 	"name": "Advanced Calibre",
-	"version": "2.0.1",
+	"version": "2.1.0",
 	"minAppVersion": "1.4.11",
 	"description": "Browse your calibre library, read books, and import book metadata directly into Obsidian.",
 	"author": "LiveAQuietLife",
